@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#111214">
+<title>Number Rescue — Locked out after a number change?</title>
+<style>
+  :root{
+    --bg:#111214; --bg2:#17181b; --card:#1c1d20; --card2:#222327; --line:#303136;
+    --text:#f3f1ea; --muted:#9a9a9c; --amber:#ffb020; --amber-dim:#8a5f16;
+    --ok:#4ade80; --radius:18px;
+    --mono: ui-monospace, "SF Mono", Consolas, monospace;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;padding:0}
+  body{
+    background:
+      radial-gradient(900px 500px at 15% -5%, rgba(255,176,32,.08), transparent 60%),
+      var(--bg);
+    color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    line-height:1.5; min-height:100vh;
+  }
+  .wrap{max-width:640px;margin:0 auto;padding:26px 18px 60px}
+  .kicker{display:flex;align-items:center;gap:8px;color:var(--amber);font-size:12px;
+    letter-spacing:.16em;text-transform:uppercase;font-weight:800;margin-bottom:16px}
+  .kicker .dot{width:7px;height:7px;border-radius:50%;background:var(--amber);box-shadow:0 0 10px var(--amber)}
+  h1{font-size:34px;line-height:1.08;margin:0 0 10px;font-weight:900;letter-spacing:-.03em}
+  h1 em{color:var(--amber);font-style:normal}
+  .sub{color:var(--muted);font-size:15.5px;margin:0 0 26px;max-width:480px}
+  .doors{display:flex;flex-direction:column;gap:12px}
+  .door{
+    position:relative;background:linear-gradient(180deg,var(--card),var(--card2));
+    border:1px solid var(--line);border-radius:var(--radius);padding:20px;cursor:pointer;
+    display:flex;align-items:center;gap:16px;transition:.15s;overflow:hidden;
+  }
+  .door:active{transform:scale(.98)}
+  .door:hover{border-color:var(--amber-dim)}
+  .door .num{flex:0 0 46px;height:46px;border-radius:13px;background:#000;border:1px solid var(--line);
+    display:flex;align-items:center;justify-content:center;font-weight:900;font-size:19px;color:var(--amber);
+    font-family:var(--mono)}
+  .door .meta b{display:block;font-size:17.5px;font-weight:800;letter-spacing:-.01em}
+  .door .meta span{font-size:13.5px;color:var(--muted)}
+  .door .go{margin-left:auto;color:var(--amber);flex:0 0 auto;font-size:22px;font-weight:900}
+  footer{text-align:center;color:var(--muted);font-size:12px;margin-top:32px;line-height:1.7}
+  footer b{color:#c8c8ca}
+  .hidden{display:none}
+  .back{display:inline-flex;align-items:center;gap:7px;color:var(--muted);background:none;border:none;
+    font-size:14.5px;font-weight:700;cursor:pointer;padding:9px 0 16px}
+  .panel-head{margin-bottom:4px}
+  .panel-head .tag{display:inline-block;font-size:11.5px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;
+    color:#000;background:var(--amber);padding:4px 10px;border-radius:999px;margin-bottom:12px}
+  .panel-head h2{font-size:25px;margin:0 0 8px;font-weight:900;letter-spacing:-.02em}
+  .panel-head p{color:var(--muted);font-size:14.5px;margin:0 0 22px;max-width:480px}
+  /* generic card */
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:18px;margin-bottom:12px}
+  .step{display:flex;gap:13px;padding:13px 0;border-top:1px solid var(--line)}
+  .step:first-of-type{border-top:none}
+  .step .n{flex:0 0 26px;height:26px;border-radius:8px;background:#000;border:1px solid var(--line);
+    color:var(--amber);font-weight:800;font-size:13px;display:flex;align-items:center;justify-content:center;font-family:var(--mono)}
+  .step p{margin:1px 0;font-size:15px;font-weight:700}
+  .step small{color:var(--muted);font-size:13.5px}
+  .btn{display:block;width:100%;text-align:center;background:var(--amber);color:#1a1200;
+    text-decoration:none;font-weight:800;font-size:15.5px;padding:15px;border-radius:13px;border:none;cursor:pointer}
+  .btn:active{opacity:.88}
+  .btn.ghost{background:transparent;border:1px solid var(--line);color:var(--text);font-weight:700}
+  .btn.sm{padding:11px;font-size:14px;width:auto;display:inline-block}
+  .note{background:#231a0a;border:1px solid var(--amber-dim);border-radius:13px;
+    padding:13px 14px;margin-top:14px;font-size:13.5px;color:#ffd38a}
+  .note b{color:var(--amber)}
+  /* door 1 */
+  .path{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:4px;margin-bottom:14px}
+  .path .opt{display:flex;align-items:center;gap:14px;padding:16px;border-radius:14px;cursor:pointer}
+  .path .opt:hover{background:var(--card2)}
+  .path .opt + .opt{border-top:1px solid var(--line)}
+  .path .ic{width:38px;height:38px;border-radius:10px;background:#000;border:1px solid var(--line);
+    display:flex;align-items:center;justify-content:center;font-size:18px;flex:0 0 38px}
+  .path .meta b{display:block;font-size:15.5px}
+  .path .meta span{font-size:13px;color:var(--muted)}
+  /* grid for service picker */
+  .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px}
+  .svc{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 8px;
+    text-align:center;cursor:pointer;transition:.15s}
+  .svc:hover{border-color:var(--amber-dim)}
+  .svc.active{border-color:var(--amber);background:var(--card2)}
+  .svc .ic{width:38px;height:38px;border-radius:10px;margin:0 auto 8px;display:flex;align-items:center;
+    justify-content:center;font-weight:800;color:#fff;font-size:15px}
+  .svc span{font-size:12.5px;font-weight:700}
+  /* form */
+  label{display:block;font-size:13px;font-weight:800;color:var(--muted);margin:16px 0 7px;text-transform:uppercase;letter-spacing:.06em}
+  label:first-of-type{margin-top:0}
+  input[type=text], input[type=email], textarea{
+    width:100%;padding:14px;font-size:15.5px;color:var(--text);background:#0e0e10;
+    border:1px solid var(--line);border-radius:12px;outline:none;font-family:inherit}
+  input:focus, textarea:focus{border-color:var(--amber)}
+  textarea{resize:vertical;min-height:70px}
+  /* output */
+  .output{background:#0e0e10;border:1px dashed var(--amber-dim);border-radius:14px;padding:16px;
+    font-family:var(--mono);font-size:13.5px;line-height:1.7;color:#e9e4d6;white-space:pre-wrap;margin-top:18px}
+  .copybar{display:flex;gap:10px;margin-top:10px}
+  .copybar .btn{flex:1}
+  .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--amber);color:#1a1200;
+    font-weight:800;font-size:14px;padding:11px 20px;border-radius:999px;opacity:0;pointer-events:none;transition:.25s;z-index:50}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(-6px)}
+  .check{display:flex;gap:12px;align-items:flex-start;padding:13px 0;border-top:1px solid var(--line)}
+  .check:first-of-type{border-top:none}
+  .check .tick{flex:0 0 24px;height:24px;border-radius:7px;background:rgba(74,222,128,.12);
+    color:var(--ok);display:flex;align-items:center;justify-content:center;font-size:13px;margin-top:1px;font-weight:900}
+  .check p{margin:0;font-size:15px;font-weight:700}
+  .check small{color:var(--muted);font-size:13.5px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- HOME -->
+  <div id="home">
+    <div class="kicker"><span class="dot"></span> Number Rescue</div>
+    <h1>New number.<br>Old accounts<br><em>still locked.</em></h1>
+    <p class="sub">Every app wants to text a code to a phone you don't have anymore. Pick what you need below — it's free, it never asks for your password, and every link goes to the real company.</p>
+
+    <div class="doors">
+      <div class="door" onclick="go('d1')">
+        <div class="num">01</div>
+        <div class="meta"><b>Get your old number back</b><span>Usually the fastest fix — more people can do this than think they can</span></div>
+        <div class="go">&rsaquo;</div>
+      </div>
+      <div class="door" onclick="go('d2')">
+        <div class="num">02</div>
+        <div class="meta"><b>Write my recovery message</b><span>Answer 3 quick things, get a ready-to-send message for support</span></div>
+        <div class="go">&rsaquo;</div>
+      </div>
+      <div class="door" onclick="go('d3')">
+        <div class="num">03</div>
+        <div class="meta"><b>Lock it down for good</b><span>Make sure a lost number can never do this to you again</span></div>
+        <div class="go">&rsaquo;</div>
+      </div>
+    </div>
+
+    <footer>
+      This page never asks for your password or a login.<br>
+      Every button sends you to the <b>real, official</b> site for that company.
+    </footer>
+  </div>
+
+  <!-- DOOR 1: GET NUMBER BACK -->
+  <div id="d1" class="hidden">
+    <button class="back" onclick="home()">&lsaquo; Back</button>
+    <div class="panel-head">
+      <div class="tag">Door 01</div>
+      <h2>Get your old number back</h2>
+      <p>If you dropped the number recently, this is almost always faster than fighting with every app one by one. Every code goes right back to finding you.</p>
+    </div>
+
+    <div class="path">
+      <div class="opt" onclick="toggle('p1a')">
+        <div class="ic">📞</div>
+        <div class="meta"><b>Still your carrier, just cancelled?</b><span>Call and ask to reactivate it</span></div>
+      </div>
+    </div>
+    <div id="p1a" class="card hidden">
+      <div class="step"><div class="n">1</div><div><p>Call your old carrier</p><small>Most carriers hold a cancelled number for about 30-90 days before it's reassigned. Ask directly: "Can I reactivate my old number on a new line or a cheap plan?"</small></div></div>
+      <div class="step"><div class="n">2</div><div><p>If yes — get it on any SIM</p><small>Even the cheapest prepaid plan works. You just need it live long enough to receive texts.</small></div></div>
+      <div class="step"><div class="n">3</div><div><p>Let the old codes roll in</p><small>Log into your stuck accounts, request a new code, and it lands on this reactivated line.</small></div></div>
+      <div class="step"><div class="n">4</div><div><p>Then update every account to your real number</p><small>While you have it, go update your number everywhere before you let it go again.</small></div></div>
+    </div>
+
+    <div class="path">
+      <div class="opt" onclick="toggle('p1b')">
+        <div class="ic">🔁</div>
+        <div class="meta"><b>Switched carriers / ported away?</b><span>Port it back or forward it</span></div>
+      </div>
+    </div>
+    <div id="p1b" class="card hidden">
+      <div class="step"><div class="n">1</div><div><p>Ask the new carrier if it's still assigned to you</p><small>If you ported your number to a new carrier (not cancelled it), it's just alive on a different SIM — pop that SIM back in your phone, or forward its texts.</small></div></div>
+      <div class="step"><div class="n">2</div><div><p>No SIM to swap? Forward the texts</p><small>Some carriers let you forward SMS to another number or an app from their account settings online.</small></div></div>
+      <div class="step"><div class="n">3</div><div><p>Fully gone? Try a number-recovery request</p><small>Call the carrier that has it now, explain it was recently yours, and ask about a "number release" — it's not guaranteed, but it costs nothing to ask.</small></div></div>
+    </div>
+
+    <div class="path">
+      <div class="opt" onclick="toggle('p1c')">
+        <div class="ic">💵</div>
+        <div class="meta"><b>Gone for good — just need codes to land somewhere</b><span>Cheap backup line for future-you</span></div>
+      </div>
+    </div>
+    <div id="p1c" class="card hidden">
+      <div class="step"><div class="n">1</div><div><p>Get a free Google Voice number</p><small>It's a real, permanent phone number tied to your Google account, not a SIM card — so it survives every future phone or carrier change.</small></div></div>
+      <div class="step"><div class="n">2</div><div><p>Can't use it on an already-locked account today</p><small>Be straight with yourself: this helps starting now, not for the account that's already stuck on the dead number. For that one, go use Door 02.</small></div></div>
+      <div class="step"><div class="n">3</div><div><p>Once you're back into an account, swap to this number</p><small>Then losing a phone or changing carriers again never locks you out of that account.</small></div></div>
+      <a class="btn" style="margin-top:14px" href="https://voice.google.com/signup" target="_blank" rel="noopener">Set up Google Voice ↗</a>
+    </div>
+
+    <div class="note"><b>Heads up:</b> none of this is a trick or a bypass — it's just getting a phone number that can actually receive the text, the same way the system was designed to work.</div>
+  </div>
+
+  <!-- DOOR 2: WRITE MESSAGE -->
+  <div id="d2" class="hidden">
+    <button class="back" onclick="home()">&lsaquo; Back</button>
+    <div class="panel-head">
+      <div class="tag">Door 02</div>
+      <h2>Write my recovery message</h2>
+      <p>Pick the app, answer a couple quick things, and I'll write the message — ready to paste into their real support form.</p>
+    </div>
+
+    <div class="grid" id="svcGrid"></div>
+
+    <div id="msgForm" class="hidden">
+      <label>Email on the account</label>
+      <input type="text" id="fEmail" placeholder="you@email.com">
+      <label>Roughly when you made the account <span style="opacity:.6;font-weight:600">(optional)</span></label>
+      <input type="text" id="fWhen" placeholder="e.g. 2019, or “in high school”">
+      <label>Anything else that proves it's you <span style="opacity:.6;font-weight:600">(optional)</span></label>
+      <textarea id="fExtra" placeholder="Username, a server/page you own, order numbers, last 4 of a card on file..."></textarea>
+      <button class="btn" style="margin-top:18px" onclick="buildMessage()">Write my message</button>
+
+      <div id="msgOut" class="hidden">
+        <div class="output" id="msgText"></div>
+        <div class="copybar">
+          <button class="btn ghost" onclick="copyMsg()">Copy message</button>
+          <a class="btn" id="msgLink" href="#" target="_blank" rel="noopener">Open support form ↗</a>
+        </div>
+        <div class="note"><b>Before you send it:</b> the real company will never ask you to also hand over your password or a login code. If a reply does, stop — that's not them.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- DOOR 3: LOCK IT DOWN -->
+  <div id="d3" class="hidden">
+    <button class="back" onclick="home()">&lsaquo; Back</button>
+    <div class="panel-head">
+      <div class="tag">Door 03</div>
+      <h2>Lock it down for good</h2>
+      <p>Do this once per account you care about and a lost number can never lock you out again.</p>
+    </div>
+    <div class="card">
+      <div class="check"><div class="tick">✓</div><div><p>Switch from text codes to an authenticator app</p><small>Google Authenticator, Authy, or your password manager. The codes live on your phone itself, not your number.</small></div></div>
+      <div class="check"><div class="tick">✓</div><div><p>Save your backup codes</p><small>Most apps hand you a one-time list when you turn on 2FA. Screenshot it. One of those gets you in with no phone at all.</small></div></div>
+      <div class="check"><div class="tick">✓</div><div><p>Add a recovery email</p><small>A second way in that has nothing to do with your number.</small></div></div>
+      <div class="check"><div class="tick">✓</div><div><p>Update your number before you cancel the old line</p><small>While the old phone still works, log into everything and change the number on file. Thirty minutes now beats weeks of this later.</small></div></div>
+    </div>
+    <div class="note"><b>Fastest win:</b> if you take nothing else from this page, turn on an authenticator app for your email and your bank. Those two unlock everything else if something goes wrong.</div>
+  </div>
+
+</div>
+<div class="toast" id="toast">Copied</div>
+
+<script>
+const SERVICES = [
+  { id:"discord", name:"Discord", color:"#5865F2", initials:"D",
+    url:"https://support.discord.com/hc/en-us/requests/new",
+    build:(f)=>`Hi, I'm locked out of my Discord account because I recently changed my phone number and can't receive the login/2FA code anymore.
+
+Account email: ${f.email}
+${f.when?`Account created roughly: ${f.when}\n`:''}${f.extra?`Other proof it's mine: ${f.extra}\n`:''}
+I'd like to verify my identity another way and update my number on file. Thank you for your help.`
+  },
+  { id:"google", name:"Google", color:"#EA4335", initials:"G",
+    url:"https://accounts.google.com/signin/recovery",
+    build:(f)=>`I'm trying to recover my Google Account. I changed my phone number and no longer receive the verification text to the old number.
+
+Account email: ${f.email}
+${f.when?`Account created roughly: ${f.when}\n`:''}${f.extra?`Other details that confirm it's mine: ${f.extra}\n`:''}
+Please use "Try another way" at sign-in to verify me without that text, and I'll update my recovery phone once I'm in.`
+  },
+  { id:"apple", name:"Apple", color:"#8e8e93", initials:"",
+    url:"https://iforgot.apple.com",
+    build:(f)=>`I need help recovering my Apple ID. My trusted phone number is no longer active after a number change, so I can't receive the verification code.
+
+Apple ID email: ${f.email}
+${f.when?`Account created roughly: ${f.when}\n`:''}${f.extra?`Other proof it's mine: ${f.extra}\n`:''}
+I'd like to go through Account Recovery and update my trusted number once verified.`
+  },
+  { id:"instagram", name:"Instagram", color:"#E1306C", initials:"IG",
+    url:"https://www.instagram.com/accounts/password/reset/",
+    build:(f)=>`I'm locked out of my Instagram account. I changed my phone number, so the security code goes to a number I don't have anymore.
+
+Email on the account: ${f.email}
+${f.when?`Account made roughly: ${f.when}\n`:''}${f.extra?`Other proof it's mine: ${f.extra}\n`:''}
+Could you verify me another way (email, video selfie, or account details) and help me update my phone number?`
+  },
+  { id:"facebook", name:"Facebook", color:"#1877F2", initials:"f",
+    url:"https://www.facebook.com/login/identify",
+    build:(f)=>`I'm locked out of my Facebook account after changing my phone number — the login code goes to a number I no longer have.
+
+Email on the account: ${f.email}
+${f.when?`Account made roughly: ${f.when}\n`:''}${f.extra?`Other proof it's mine: ${f.extra}\n`:''}
+I'd like to confirm my identity another way (email, trusted contacts, or ID) and update my number.`
+  },
+  { id:"microsoft", name:"Microsoft", color:"#0a84ff", initials:"M",
+    url:"https://account.live.com/acsr",
+    build:(f)=>`I'm locked out of my Microsoft account because my phone number changed and I can't receive the security code.
+
+Email on the account: ${f.email}
+${f.when?`Account made roughly: ${f.when}\n`:''}${f.extra?`Other proof it's mine: ${f.extra}\n`:''}
+Please review my case for manual identity verification so I can get back in and update my number.`
+  },
+  { id:"x", name:"X", color:"#111", initials:"X",
+    url:"https://help.x.com/en/forms/account-access/regain-access",
+    build:(f)=>`I'm locked out of my X (Twitter) account. I changed my phone number and no longer get the login code.
+
+Email or username on the account: ${f.email}
+${f.when?`Account made roughly: ${f.when}\n`:''}${f.extra?`Other proof it's mine: ${f.extra}\n`:''}
+Could you help verify me another way and update my phone number on file?`
+  },
+  { id:"snapchat", name:"Snapchat", color:"#FFFC00", initials:"👻", dark:true,
+    url:"https://accounts.snapchat.com/accounts/password_reset_request",
+    build:(f)=>`I'm locked out of Snapchat after a number change — I can't get the verification text anymore.
+
+Email on the account: ${f.email}
+${f.when?`Account made roughly: ${f.when}\n`:''}${f.extra?`Other proof it's mine: ${f.extra}\n`:''}
+Could you verify me by email instead and help me update my number?`
+  },
+  { id:"other", name:"Something else", color:"#555", initials:"?",
+    url:"",
+    build:(f)=>`Hi, I'm locked out of my account because I recently changed my phone number and can no longer receive the verification code sent there.
+
+Email on the account: ${f.email}
+${f.when?`Account made roughly: ${f.when}\n`:''}${f.extra?`Other proof it's mine: ${f.extra}\n`:''}
+Could you please verify my identity another way and help me update the phone number on file? Thank you.`
+  }
+];
+
+let selectedService = null;
+
+function buildGrid(){
+  const grid = document.getElementById('svcGrid');
+  grid.innerHTML = "";
+  SERVICES.forEach(s=>{
+    const el = document.createElement('div');
+    el.className = 'svc';
+    el.id = 'svc-'+s.id;
+    const style = s.dark ? `color:#111;background:${s.color}` : `background:${s.color}`;
+    el.innerHTML = `<div class="ic" style="${style}">${s.initials}</div><span>${s.name}</span>`;
+    el.onclick = ()=>selectService(s);
+    grid.appendChild(el);
+  });
+}
+
+function selectService(s){
+  selectedService = s;
+  document.querySelectorAll('.svc').forEach(e=>e.classList.remove('active'));
+  document.getElementById('svc-'+s.id).classList.add('active');
+  document.getElementById('msgForm').classList.remove('hidden');
+  document.getElementById('msgOut').classList.add('hidden');
+}
+
+function buildMessage(){
+  if(!selectedService) return;
+  const f = {
+    email: document.getElementById('fEmail').value.trim() || "[your account email]",
+    when: document.getElementById('fWhen').value.trim(),
+    extra: document.getElementById('fExtra').value.trim()
+  };
+  const msg = selectedService.build(f);
+  document.getElementById('msgText').textContent = msg;
+  const link = document.getElementById('msgLink');
+  if(selectedService.url){
+    link.href = selectedService.url;
+    link.style.display = 'block';
+    link.textContent = 'Open support form ↗';
+  } else {
+    link.style.display = 'none';
+  }
+  document.getElementById('msgOut').classList.remove('hidden');
+  document.getElementById('msgOut').scrollIntoView({behavior:'smooth', block:'nearest'});
+}
+
+function copyMsg(){
+  const text = document.getElementById('msgText').textContent;
+  navigator.clipboard?.writeText(text).then(showToast).catch(()=>{
+    const ta = document.createElement('textarea');
+    ta.value = text; document.body.appendChild(ta); ta.select();
+    document.execCommand('copy'); document.body.removeChild(ta);
+    showToast();
+  });
+}
+
+function showToast(){
+  const t = document.getElementById('toast');
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 1600);
+}
+
+function toggle(id){
+  const el = document.getElementById(id);
+  document.querySelectorAll('.path .card, [id^="p1"]').forEach(c=>{});
+  el.classList.toggle('hidden');
+  if(!el.classList.contains('hidden')) el.scrollIntoView({behavior:'smooth', block:'nearest'});
+}
+
+const screens = ['home','d1','d2','d3'];
+function go(id){
+  screens.forEach(s=>document.getElementById(s).classList.toggle('hidden', s!==id));
+  window.scrollTo(0,0);
+}
+function home(){ go('home'); }
+
+buildGrid();
+</script>
+</body>
+</html>
